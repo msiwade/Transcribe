@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-transcribe-streaming": "^3.844.0"
+  }
+}
