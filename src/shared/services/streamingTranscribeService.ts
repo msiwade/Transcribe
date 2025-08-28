@@ -44,24 +44,28 @@ export const encodePCMChunk = (chunk: Float32Array): Uint8Array => {
 
 export const createAudioStream = async function* (
   mediaStream: MediaStream,
-  onStop: () => boolean
+  onStop: () => boolean,
+  sampleRate: number = 16000
 ): AsyncGenerator<{ AudioEvent: { AudioChunk: Uint8Array } }> {
-  const audioContext = new AudioContext({ sampleRate: 16000 });
+  const audioContext = new AudioContext({ sampleRate });
   const source = audioContext.createMediaStreamSource(mediaStream);
 
-  const processor = audioContext.createScriptProcessor(512, 1, 1);
+  await audioContext.audioWorklet.addModule("/audio-processor.js");
+  const processor = new AudioWorkletNode(audioContext, "audio-processor");
 
   const audioQueue: Uint8Array[] = [];
   let isProcessing = true;
 
-  processor.onaudioprocess = (event) => {
+  processor.port.onmessage = (event) => {
     if (!isProcessing) return;
 
-    const inputData = event.inputBuffer.getChannelData(0);
-    const encodedChunk = encodePCMChunk(inputData);
+    if (event.data.type === "audiodata") {
+      const inputData = new Float32Array(event.data.buffer);
+      const encodedChunk = encodePCMChunk(inputData);
 
-    if (encodedChunk.length > 0) {
-      audioQueue.push(encodedChunk);
+      if (encodedChunk.length > 0) {
+        audioQueue.push(encodedChunk);
+      }
     }
   };
 
@@ -88,16 +92,17 @@ export const createAudioStream = async function* (
 export const startTranscribeStreaming = async (
   mediaStream: MediaStream,
   onTranscriptionResult: (text: string, isFinal: boolean) => void,
-  onStop: () => boolean
+  onStop: () => boolean,
+  sampleRate: number = 16000
 ) => {
   try {
     const client = await createTranscribeStreamingClient();
-    const audioStream = createAudioStream(mediaStream, onStop);
+    const audioStream = createAudioStream(mediaStream, onStop, sampleRate);
 
     const command = new StartStreamTranscriptionCommand({
       LanguageCode: "ja-JP",
       MediaEncoding: "pcm",
-      MediaSampleRateHertz: 16000,
+      MediaSampleRateHertz: sampleRate,
       AudioStream: audioStream,
     });
 
