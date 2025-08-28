@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, memo } from "react";
 import { IconButton, Box, Tooltip } from "@mui/material";
 import { Mic as MicIcon, Stop as StopIcon } from "@mui/icons-material";
-import { startTranscribeStreaming } from "../services/amplifyService";
+import { startTranscribeStreaming } from "../services/streamingTranscribeService";
 
 interface VoiceRecorderProps {
   onTranscriptionResult?: (text: string) => void;
@@ -12,7 +12,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   onTranscriptionResult,
   disabled = false,
 }) => {
-  // React状態管理を使用
   const [isRecording, setIsRecording] = useState(false);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -27,7 +26,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         throw new Error("このブラウザは音声録音をサポートしていません");
       }
       const { createTranscribeStreamingClient } = await import(
-        "../services/amplifyService"
+        "../services/streamingTranscribeService"
       );
       await createTranscribeStreamingClient();
     } catch (error) {
@@ -123,7 +122,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     }
   }, []);
 
-  // 録音状態変更を監視して適切な処理を実行
   const isFirstRenderRef = useRef(true);
   const prevIsRecordingRef = useRef(false);
 
@@ -134,13 +132,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       return;
     }
 
-    // 状態が実際に変更された場合のみ処理を実行
     if (prevIsRecordingRef.current !== isRecording) {
       console.log(
         `🔄 録音状態変更: ${prevIsRecordingRef.current} → ${isRecording}`
       );
       if (isRecording) {
-        // 録音開始時：空文字列を送信
         onTranscriptionResult?.("");
       }
       prevIsRecordingRef.current = isRecording;

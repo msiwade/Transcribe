@@ -4,7 +4,6 @@ import {
   StartStreamTranscriptionCommand,
 } from "@aws-sdk/client-transcribe-streaming";
 
-// AWS Transcribe Streamingサービス
 export const createTranscribeStreamingClient = async () => {
   try {
     const session = await fetchAuthSession();
@@ -30,7 +29,6 @@ export const createTranscribeStreamingClient = async () => {
   }
 };
 
-// PCMエンコーディング関数
 export const encodePCMChunk = (chunk: Float32Array): Uint8Array => {
   const buffer = new ArrayBuffer(chunk.length * 2);
   const view = new DataView(buffer);
@@ -44,7 +42,6 @@ export const encodePCMChunk = (chunk: Float32Array): Uint8Array => {
   return new Uint8Array(buffer);
 };
 
-// 音声ストリームジェネレータ
 export const createAudioStream = async function* (
   mediaStream: MediaStream,
   onStop: () => boolean
@@ -52,7 +49,6 @@ export const createAudioStream = async function* (
   const audioContext = new AudioContext({ sampleRate: 16000 });
   const source = audioContext.createMediaStreamSource(mediaStream);
 
-  // より小さいバッファサイズで遅延を減らす（512サンプル = 32ms at 16kHz）
   const processor = audioContext.createScriptProcessor(512, 1, 1);
 
   const audioQueue: Uint8Array[] = [];
@@ -64,7 +60,6 @@ export const createAudioStream = async function* (
     const inputData = event.inputBuffer.getChannelData(0);
     const encodedChunk = encodePCMChunk(inputData);
 
-    // キューに追加（バッファリングを最小限に）
     if (encodedChunk.length > 0) {
       audioQueue.push(encodedChunk);
     }
@@ -75,13 +70,11 @@ export const createAudioStream = async function* (
 
   try {
     while (!onStop() && isProcessing) {
-      // キューから音声データを取得
       if (audioQueue.length > 0) {
         const chunk = audioQueue.shift()!;
         yield { AudioEvent: { AudioChunk: chunk } };
       }
 
-      // 短い間隔でポーリング（遅延を最小限に）
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
   } finally {
@@ -92,7 +85,6 @@ export const createAudioStream = async function* (
   }
 };
 
-// Transcribe Streamingを開始
 export const startTranscribeStreaming = async (
   mediaStream: MediaStream,
   onTranscriptionResult: (text: string, isFinal: boolean) => void,

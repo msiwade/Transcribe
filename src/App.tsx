@@ -3,7 +3,7 @@ import { Box, Typography, AppBar, Toolbar } from "@mui/material";
 import { Authenticator } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 
-import VoiceRecorder from "./components/VoiceRecorder";
+import { VoiceRecorder } from "./features/voice-transcription";
 
 function App() {
   const [transcriptionText, setTranscriptionText] = useState<string>("");

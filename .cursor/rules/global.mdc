@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# 開発ルール
+
+## TypeScript
+
+- `any`使用禁止 - 明確な型定義必須
+- 型安全性を最優先とする
+
+## アーキテクチャ
+
+### ページ作成
+
+1. `src/features/[機能名]/`でディレクトリ作成
+2. サブディレクトリ：`components/`, `hooks/`, `types/`, `services/`
+3. `src/config/routes.ts`にルート追加
+
+### コンポーネント
+
+- 関数コンポーネント使用
+- `React.FC`禁止 - props 直接型注釈
+- JSX のみの場合 React インポート不要
+- Server/Client Component 区別明確化
+- Suspense 活用
+
+## Amplify Data Client
+
+### 推奨パターン
+
+```tsx
+// 特定取得
+const { data } = await client.models.Todo.get({ id });
+// フィルタ付きクエリ
+const { data } = await client.models.Todo.list({
+  filter: { userId: { eq: currentUserId } },
+});
+```
