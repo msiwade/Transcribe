@@ -1,4 +1,11 @@
-import { useState, useCallback, lazy, Suspense, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  lazy,
+  Suspense,
+  useRef,
+  useEffect,
+} from "react";
 import {
   Box,
   Typography,
@@ -21,6 +28,7 @@ const MixedVoiceRecorder = lazy(
 function App() {
   const [transcriptionText, setTranscriptionText] = useState<string>("");
   const [isMixedMode, setIsMixedMode] = useState(false);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
   const voiceRecorderRef = useRef<{
     stopRecording: () => void;
@@ -31,9 +39,39 @@ function App() {
     clearAccumulatedText: () => void;
   } | null>(null);
 
+  const outputBoxRef = useRef<HTMLDivElement | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleTranscriptionResult = useCallback((text: string) => {
     setTranscriptionText(text);
   }, []);
+
+  const scrollToBottom = useCallback(() => {
+    if (outputBoxRef.current && isAutoScrollEnabled) {
+      outputBoxRef.current.scrollTop = outputBoxRef.current.scrollHeight;
+    }
+  }, [isAutoScrollEnabled]);
+
+  const handleScroll = useCallback(() => {
+    if (!outputBoxRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = outputBoxRef.current;
+    const isNearBottom = scrollTop + clientHeight >= scrollHeight - 10;
+
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+
+    if (isAutoScrollEnabled && !isNearBottom) {
+      setIsAutoScrollEnabled(false);
+    }
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      if (isNearBottom) {
+        setIsAutoScrollEnabled(true);
+      }
+    }, 150);
+  }, [isAutoScrollEnabled]);
 
   const toggleMode = () => {
     if (isMixedMode && mixedVoiceRecorderRef.current) {
@@ -55,6 +93,23 @@ function App() {
       voiceRecorderRef.current.clearAccumulatedText();
     }
   };
+
+  useEffect(() => {
+    if (transcriptionText) {
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [transcriptionText, scrollToBottom]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Authenticator>
@@ -147,17 +202,30 @@ function App() {
                   クリア
                 </Button>
               </Box>
-              <Typography
-                variant="body1"
+              <Box
+                ref={outputBoxRef}
+                onScroll={handleScroll}
                 sx={{
-                  whiteSpace: "pre-wrap",
-                  wordWrap: "break-word",
-                  lineHeight: 1.6,
+                  maxHeight: "300px",
+                  overflowY: "auto",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: 1,
+                  p: 2,
+                  backgroundColor: "#fafafa",
                 }}
               >
-                {transcriptionText ||
-                  "デバイスを選択して録音ボタンを押してください..."}
-              </Typography>
+                <Typography
+                  variant="body1"
+                  sx={{
+                    whiteSpace: "pre-wrap",
+                    wordWrap: "break-word",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {transcriptionText ||
+                    "デバイスを選択して録音ボタンを押してください..."}
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </Box>
